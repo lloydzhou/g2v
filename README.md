@@ -10,8 +10,11 @@ Vue component wrapper for [@antv/g2](https://github.com/antvis/g2).
 
 ## demo
 ```
+import { Chart, ... } from "g2v"
+
+
 <template>
-  <Chart :width="640" :height="480">
+  <Chart :width="640" :height="480" @before-render="beforerender" @interval-click="intervalclick">
     <SpaceLayer>
       <FetchData value="https://gw.alipayobjects.com/os/bmw-prod/fb9db6b7-23a5-4c23-bbef-c54a55fee580.csv" format="csv" />
       <Interval>
