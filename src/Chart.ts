@@ -1,6 +1,7 @@
 // @ts-nocheck
-import { defineComponent, onMounted, onUnmounted, ref, shallowReactive, h, nextTick, Fragment, provide, cloneVNode, watchEffect, watch } from 'vue'
+import { defineComponent, onMounted, onUnmounted, shallowRef, shallowReactive, h, Fragment, provide, cloneVNode, watchEffect, watch, nextTick } from 'vue'
 import { Chart as G2Chart } from '@antv/g2';
+import { debounce } from '@antv/util';
 import type {
   Data,
   ViewComposition, GeoViewComposition, GeoPathComposition, SpaceLayerComposition, SpaceFlexComposition, FacetContext, FacetRectComposition, RepeatMatrixComposition, FacetCircleComposition, 
@@ -26,23 +27,23 @@ export function createComponent<T>(t='view', displayName='', key='children') {
     key,
     setup(props, { attrs, slots, expose }) {
       const { type=t, ...other } = attrs
-      const childrenRefs = ref({})
-      const encodeRefs = ref({})
-      const attributeRefs = ref({})
+      const childrenRefs = shallowRef({})
+      const encodeRefs = shallowRef({})
+      const attributeRefs = shallowRef({})
       const options = () => {
         const attrs = Object.entries(attributeRefs.value).reduce((s, [k, child]) => {
-          const o = child ? child.options() : undefined
+          const o = child && child.value ? child.value.options() : undefined
           return { ...s, [k]: o }
         }, {})
         const childrens = Object.values(childrenRefs.value).reduce((s, [k, child]) => {
-          const o = child ? child.value.options() : undefined
+          const o = child && child.value ? child.value.options() : undefined
           if (o) {
             return { ...s, [k]: (s[k] || []).concat(o) }
           }
           return s
         }, {})
         const encodes = Object.values(encodeRefs.value).reduce((s, [k, child]) => {
-          const o = child ? child.value.options() : undefined
+          const o = child && child.value ? child.value.options() : undefined
           return o && o.name && o.value ? {...s, [k]: { ...(s[k] || {}), [o.name]: o.value } } : s
         }, {})
         return { type, ...other, ...attrs, ...childrens, ...encodes }
@@ -53,7 +54,7 @@ export function createComponent<T>(t='view', displayName='', key='children') {
           const { key: ck, props={}, type: ct } = child
           const { type: t = ct.key, children, ref: _ref } = props || {}
           const key = ck || ct.key
-          const r = _ref || ref()
+          const r = _ref || shallowRef()
           if (isChildrenLikeKey(key)) {
             childrenRefs.value[index] = [key, r];
           } else if (isEncodeLikeKey(key)) {
@@ -181,9 +182,9 @@ export const contextSymbol = String(Symbol('g2ContextSymbol'))
 export const Chart = defineComponent({
   name: 'Chart',
   setup(props, { attrs, slots, expose }) {
-    const { className='', onRendered, width=600, height=300, style={}, ...other } = props
-    const container = ref<HTMLDivElement>();
-    const viewRef = ref();
+    const { className='', onRendered, width=600, height=300, style={}, ...other } = attrs
+    const container = shallowRef<HTMLDivElement>();
+    const viewRef = shallowRef();
     const context = shallowReactive({ chart: null })
     provide(contextSymbol, context)
     expose(context)
@@ -200,22 +201,23 @@ export const Chart = defineComponent({
       context.chart.destroy()
     })
 
-    watch(() => [context.chart, viewRef.value], () => {
+    const update = debounce(() => {
       const { options, events } = processProps(other)
       const { chart } = context
       if (chart && viewRef.value) {
         Object.entries(events).forEach(([n, f]) => chart.off(n, f))
         // add event
         Object.entries(events).forEach(([n, f]) => chart.on(n, f))
-        console.log('watchEffect', options, chart, viewRef.value.options())
+        // console.log('watchEffect', options, chart, viewRef, viewRef.value.options())
         chart.options({ ...options, ...viewRef.value.options() })
         chart.render()
       }
     })
-
+    const children = shallowRef()
+    watch(() => [context.chart, viewRef.value, children.value], update)
     return () => {
       const value = slots.default && slots.default() || []
-      const children = value
+      children.value = value
         ? value.length == 1
           ? cloneVNode(value[0], {ref: viewRef})
           : h(View, {ref: viewRef}, value)
@@ -224,7 +226,7 @@ export const Chart = defineComponent({
         ref: container,
         class: `antv-g2-chart ${className}`,
         style: `display: block;width: 100%;height: 100%;${style}`
-      }, children)
+      }, children.value)
     }
   }
 })

@@ -3,10 +3,14 @@ import { Chart } from '../src'
 import { View, Data, FetchData, Interval } from '../src'
 import { SpaceLayer, Encode, FieldEncode, SortX, StackY, ThetaCoordinate } from '../src'
 import { Title } from '../src'
+// test event
+const log = (name, event) => console.log(name, event)
+const beforerender = log.bind(null, 'beforerender')
+const intervalclick = log.bind(null, 'interval:click')
 </script>
 
 <template>
-  <Chart :width="640" :height="480">
+  <Chart :width="640" :height="480" @before-render="beforerender" @interval-click="intervalclick">
     <SpaceLayer>
       <FetchData value="https://gw.alipayobjects.com/os/bmw-prod/fb9db6b7-23a5-4c23-bbef-c54a55fee580.csv" format="csv" />
       <Interval>
