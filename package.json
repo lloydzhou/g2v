@@ -1,6 +1,6 @@
 {
   "name": "g2v",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vue component wrapper for antv@g2",
   "repository": {
     "type": "git",
